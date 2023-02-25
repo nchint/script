@@ -28,6 +28,7 @@ type Pipe struct {
 	// Reader is the underlying reader.
 	Reader     ReadAutoCloser
 	stdout     io.Writer
+	stderr     io.Writer
 	httpClient *http.Client
 
 	// because pipe stages are concurrent, protect 'err'
@@ -171,6 +172,7 @@ func NewPipe() *Pipe {
 		mu:         &sync.Mutex{},
 		err:        nil,
 		stdout:     os.Stdout,
+		stderr:     nil,
 		httpClient: http.DefaultClient,
 	}
 }
@@ -390,6 +392,9 @@ func (p *Pipe) Exec(cmdLine string) *Pipe {
 		cmd.Stdin = r
 		cmd.Stdout = w
 		cmd.Stderr = w
+		if p.stderr != nil {
+			cmd.Stderr = p.stderr
+		}
 		err := cmd.Start()
 		if err != nil {
 			fmt.Fprintln(w, err)
@@ -428,6 +433,9 @@ func (p *Pipe) ExecForEach(cmdLine string) *Pipe {
 			cmd := exec.Command(args[0], args[1:]...)
 			cmd.Stdout = w
 			cmd.Stderr = w
+			if p.stderr != nil {
+				cmd.Stderr = p.stderr
+			}
 			err = cmd.Start()
 			if err != nil {
 				fmt.Fprintln(w, err)
@@ -872,6 +880,13 @@ func (p *Pipe) WithReader(r io.Reader) *Pipe {
 // default [os.Stdout].
 func (p *Pipe) WithStdout(w io.Writer) *Pipe {
 	p.stdout = w
+	return p
+}
+
+// WithStderr sets the pipe's standard error to the writer w, instead of the
+// default of writing to the pipe's stdout.
+func (p *Pipe) WithStderr(w io.Writer) *Pipe {
+	p.stderr = w
 	return p
 }
 
