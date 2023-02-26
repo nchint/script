@@ -66,6 +66,21 @@ func Exec(cmdLine string) *Pipe {
 	return NewPipe().Exec(cmdLine)
 }
 
+// Like Exec but redirect the command's stderr to an abritary io.Writer
+func ExecWithStderr(cmdLine string, stderr io.Writer) *Pipe {
+	return NewPipe().ExecWithStderr(cmdLine, stderr)
+}
+
+// Like Exec but redirect the command's stdout to an abritary io.Writer
+func ExecWithStdout(cmdLine string, stdout io.Writer) *Pipe {
+	return NewPipe().ExecWithStdout(cmdLine, stdout)
+}
+
+// Like Exec but redirect the command's stdout and stderr to abritary io.Writer
+func ExecWithStdoutStderr(cmdLine string, stdout io.Writer, stderr io.Writer) *Pipe {
+	return NewPipe().ExecWithStdoutStderr(cmdLine, stdout, stderr)
+}
+
 // File creates a pipe that reads from the file path.
 func File(path string) *Pipe {
 	p := NewPipe()
@@ -381,7 +396,26 @@ func (p *Pipe) Error() error {
 // want output you will need to reset the error status before calling
 // [Pipe.String].
 func (p *Pipe) Exec(cmdLine string) *Pipe {
-	return p.Filter(func(r io.Reader, w io.Writer) error {
+	return p.Filter(getExecFilterFunc(cmdLine, nil, nil))
+}
+
+// Like [Pip.Exec] but redirect the command's stdout to an abritary io.Writer
+func (p *Pipe) ExecWithStdout(cmdLine string, stdout io.Writer) *Pipe {
+	return p.Filter(getExecFilterFunc(cmdLine, stdout, nil))
+}
+
+// Like [Pip.Exec] but redirect the command's stderr to an abritary io.Writer
+func (p *Pipe) ExecWithStderr(cmdLine string, stderr io.Writer) *Pipe {
+	return p.Filter(getExecFilterFunc(cmdLine, nil, stderr))
+}
+
+// Like [Pip.Exec] but redirect the command's stdout and stderr to abritary io.Writer
+func (p *Pipe) ExecWithStdoutStderr(cmdLine string, stdout io.Writer, stderr io.Writer) *Pipe {
+	return p.Filter(getExecFilterFunc(cmdLine, stdout, stderr))
+}
+
+func getExecFilterFunc(cmdLine string, stdout io.Writer, stderr io.Writer) func(io.Reader, io.Writer) error {
+	return func(r io.Reader, w io.Writer) error {
 		args, ok := shell.Split(cmdLine) // strings.Fields doesn't handle quotes
 		if !ok {
 			return fmt.Errorf("unbalanced quotes or backslashes in [%s]", cmdLine)
@@ -389,14 +423,20 @@ func (p *Pipe) Exec(cmdLine string) *Pipe {
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdin = r
 		cmd.Stdout = w
+		if stdout != nil {
+			cmd.Stdout = stdout
+		}
 		cmd.Stderr = w
+		if stderr != nil {
+			cmd.Stderr = stderr
+		}
 		err := cmd.Start()
 		if err != nil {
 			fmt.Fprintln(w, err)
 			return err
 		}
 		return cmd.Wait()
-	})
+	}
 }
 
 // ExecForEach renders cmdLine as a Go template for each line of input, running
