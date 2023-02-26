@@ -1076,6 +1076,86 @@ func TestExecRunsGoHelpAndGetsUsageMessage(t *testing.T) {
 	}
 }
 
+func TestExecWithStdout(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	want := "foo\n"
+	p := script.ExecWithStdout("echo foo", buf)
+	if p.Error() != nil {
+		t.Fatal(p.Error())
+	}
+	output, err := p.String()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(output) != 0 {
+		t.Fatalf("want empty output, got %q", output)
+	}
+	got := buf.String()
+	if want != got {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestExecWithStderr(t *testing.T) {
+	t.Parallel()
+	buf := &bytes.Buffer{}
+	path := filepath.Join("testdata", "write_data.go")
+	cmd := strings.Join([]string{"go", "run", path, "hello", "world"}, " ")
+	wantStdout := "hello\n"
+	wantStderr := "world\n"
+	p := script.ExecWithStderr(cmd, buf)
+	if p.Error() != nil {
+		t.Fatal(p.Error())
+	}
+
+	output, err := p.String()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if output != wantStdout {
+		t.Error(cmp.Diff(wantStdout, output))
+	}
+
+	gotStderr := buf.String()
+	if wantStderr != gotStderr {
+		t.Error(cmp.Diff(wantStderr, gotStderr))
+	}
+}
+
+func TestExecWithStdoutStderr(t *testing.T) {
+	t.Parallel()
+	stdoutBuf := &bytes.Buffer{}
+	stderrBuf := &bytes.Buffer{}
+	path := filepath.Join("testdata", "write_data.go")
+	cmd := strings.Join([]string{"go", "run", path, "hello", "world"}, " ")
+	wantStdout := "hello\n"
+	wantStderr := "world\n"
+	p := script.ExecWithStdoutStderr(cmd, stdoutBuf, stderrBuf)
+	if p.Error() != nil {
+		t.Fatal(p.Error())
+	}
+
+	output, err := p.String()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(output) != 0 {
+		t.Fatalf("want empty output, got %q", output)
+	}
+
+	gotStdout := stdoutBuf.String()
+	if wantStdout != gotStdout {
+		t.Error(cmp.Diff(wantStdout, gotStdout))
+	}
+
+	gotStderr := stderrBuf.String()
+	if wantStderr != gotStderr {
+		t.Error(cmp.Diff(wantStderr, gotStderr))
+	}
+}
+
 func TestFileOutputsContentsOfSpecifiedFile(t *testing.T) {
 	t.Parallel()
 	want := "This is the first line in the file.\nHello, world.\nThis is another line in the file.\n"

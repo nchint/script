@@ -66,14 +66,14 @@ func Exec(cmdLine string) *Pipe {
 	return NewPipe().Exec(cmdLine)
 }
 
-// Like Exec but redirect the command's stderr to an abritary io.Writer
-func ExecWithStderr(cmdLine string, stderr io.Writer) *Pipe {
-	return NewPipe().ExecWithStderr(cmdLine, stderr)
-}
-
 // Like Exec but redirect the command's stdout to an abritary io.Writer
 func ExecWithStdout(cmdLine string, stdout io.Writer) *Pipe {
 	return NewPipe().ExecWithStdout(cmdLine, stdout)
+}
+
+// Like Exec but redirect the command's stderr to an abritary io.Writer
+func ExecWithStderr(cmdLine string, stderr io.Writer) *Pipe {
+	return NewPipe().ExecWithStderr(cmdLine, stderr)
 }
 
 // Like Exec but redirect the command's stdout and stderr to abritary io.Writer
